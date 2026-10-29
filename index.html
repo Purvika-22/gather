@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#6366f1" />
+<title>Gather — Event Management</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>" />
+<style>
+  :root{
+    --bg:#f4f5fb;
+    --surface:#ffffff;
+    --ink:#141628;
+    --muted:#6b7189;
+    --line:#e6e8f0;
+    --brand:#6366f1;
+    --brand-2:#a855f7;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  body::before{
+    content:'';
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(620px 320px at 12% -8%, rgba(99,102,241,.18), transparent 70%),
+      radial-gradient(620px 320px at 88% -4%, rgba(168,85,247,.16), transparent 70%);
+  }
+  .wrap{width:min(1100px, calc(100% - 40px)); margin-inline:auto}
+
+  /* ---------- Nav ---------- */
+  .nav{
+    position:sticky; top:0; z-index:20;
+    background:rgba(255,255,255,.72);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{display:flex; align-items:center; justify-content:space-between; height:64px}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; letter-spacing:-.02em; color:var(--ink); text-decoration:none}
+  .brand .dot{
+    width:28px; height:28px; border-radius:9px;
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    box-shadow:0 6px 16px rgba(99,102,241,.4);
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    font:inherit; font-weight:600; font-size:14px;
+    border:1px solid transparent; border-radius:12px;
+    padding:10px 16px; cursor:pointer; transition:transform .18s, box-shadow .18s, border-color .18s, color .18s;
+    display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    color:#fff; box-shadow:0 8px 20px rgba(99,102,241,.32);
+  }
+  .btn-primary:hover{transform:translateY(-1px); box-shadow:0 12px 26px rgba(99,102,241,.42)}
+  .btn-ghost{background:#fff; border-color:var(--line); color:var(--muted)}
+  .btn-ghost:hover{color:var(--ink); border-color:#d3d7e6}
+  .btn:active{transform:translateY(0) scale(.985)}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:52px 0 6px; text-align:center}
+  .hero h1{margin:0 0 14px; font-size:clamp(30px,5vw,46px); line-height:1.08; letter-spacing:-.035em}
+  .grad{
+    background:linear-gradient(120deg,var(--brand),var(--brand-2) 55%,#ec4899);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p{margin:0 auto; max-width:530px; color:var(--muted); font-size:16px; line-height:1.65}
+
+  /* ---------- Stats ---------- */
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:34px 0 26px}
+  .stat{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 20px; box-shadow:var(--shadow);
+  }
+  .stat .k{font-size:26px; font-weight:800; letter-spacing:-.025em}
+  .stat .l{font-size:13px; color:var(--muted); margin-top:3px}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:18px}
+  .search{flex:1 1 250px; position:relative}
+  .search input{
+    width:100%; font:inherit; font-size:14px;
+    padding:12px 14px 12px 40px;
+    border-radius:12px; border:1px solid var(--line); background:#fff; outline:none;
+    transition:border-color .18s, box-shadow .18s;
+  }
+  .search input::placeholder{color:#a8aec4}
+  .search input:focus{border-color:var(--brand); box-shadow:0 0 0 4px rgba(99,102,241,.12)}
+  .search .ico{position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.45; display:flex}
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{
+    font:inherit; font-size:13px; font-weight:600;
+    padding:8px 14px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--muted);
+    transition:.18s;
+  }
+  .chip:hover{border-color:#d3d7e6; color:var(--ink)}
+  .chip.active{background:var(--ink); border-color:var(--ink); color:#fff}
+
+  /* ---------- Grid & cards ---------- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(285px,1fr)); gap:16px; padding-bottom:70px}
+  .card{
+    position:relative; overflow:hidden;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:10px;
+    transition:transform .2s, box-shadow .2s;
+  }
+  .card::before{
+    content:''; position:absolute; inset:0 0 auto 0; height:3px;
+    background:linear-gradient(90deg,var(--brand),var(--brand-2));
+    opacity:0; transition:opacity .2s;
+  }
+  .card:hover{transform:translateY(-3px); box-shadow:0 4px 10px rgba(16,24,40,.05), 0 18px 36px rgba(16,24,40,.1)}
+  .card:hover::before{opacity:1}
+  .card.past{opacity:.62}
+  .card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
+  .date-badge{
+    width:52px; height:52px; border-radius:14px; flex:none;
+    background:linear-gradient(135deg, rgba(99,102,241,.14), rgba(168,85,247,.14));
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .date-badge b{font-size:19px; font-weight:800; color:var(--brand); line-height:1}
+  .date-badge span{font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin-top:4px}
+  .icon-btn{
+    width:30px; height:30px; border-radius:9px; flex:none;
+    border:1px solid transparent; background:transparent; color:#c3c8d8;
+    font-size:15px; line-height:1; cursor:pointer; display:grid; place-items:center;
+    transition:.15s;
+  }
+  .icon-btn:hover{background:#fee2e2; color:#ef4444}
+  .card h3{margin:0; font-size:16.5px; line-height:1.35; letter-spacing:-.01em}
+  .tag{align-self:flex-start; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px}
+  .meta{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--muted); line-height:1.4}
+  .meta span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .card-foot{
+    margin-top:auto; padding-top:12px; border-top:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-size:13px; color:var(--muted);
+  }
+
+  /* ---------- Empty ---------- */
+  .empty{display:none; text-align:center; padding:64px 20px 80px; color:var(--muted)}
+  .empty.show{display:block}
+  .empty .big{font-size:42px; margin-bottom:10px}
+  .empty h3{margin:0 0 6px; color:var(--ink); font-size:17px}
+  .empty p{margin:0 0 18px; font-size:14px}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:50;
+    background:rgba(20,22,40,.45); backdrop-filter:blur(4px);
+    display:none; place-items:center; padding:20px;
+  }
+  .overlay.show{display:grid}
+  .modal{
+    width:min(520px,100%); max-height:90vh; overflow:auto;
+    background:#fff; border-radius:20px; padding:26px;
+    box-shadow:0 30px 70px rgba(16,24,40,.32);
+    animation:pop .22s cubic-bezier(.2,.9,.3,1.1);
+  }
+  @keyframes pop{from{opacity:0; transform:translateY(14px) scale(.98)} to{opacity:1; transform:none}}
+  .modal h2{margin:0 0 4px; font-size:20px; letter-spacing:-.02em}
+  .modal .sub{margin:0 0 22px; font-size:13.5px; color:var(--muted)}
+  .field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px}
+  .field label{font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+  .field input, .field select, .field textarea{
+    font:inherit; font-size:14px; width:100%;
+    padding:11px 13px; border-radius:11px;
+    border:1px solid var(--line); background:#fbfbfe; outline:none;
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .field textarea{resize:vertical; min-height:76px}
+  .field input:focus, .field select:focus, .field textarea:focus{
+    border-color:var(--brand); background:#fff; box-shadow:0 0 0 4px rgba(99,102,241,.1);
+  }
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .modal-foot{display:flex; justify-content:flex-end; gap:10px; margin-top:22px}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed; left:50%; bottom:28px; z-index:60;
+    transform:translate(-50%, 20px); opacity:0; pointer-events:none;
+    background:var(--ink); color:#fff; font-size:14px; font-weight:500;
+    padding:12px 20px; border-radius:12px; box-shadow:0 12px 30px rgba(16,24,40,.28);
+    transition:transform .25s, opacity .25s; max-width:90vw;
+  }
+  .toast.show{opacity:1; transform:translate(-50%, 0)}
+
+  @media (max-width:640px){
+    .hero{padding-top:36px}
+    .stats{gap:10px}
+    .stat{padding:14px 15px}
+    .stat .k{font-size:21px}
+    .stat .l{font-size:11.5px}
+    .row{grid-template-columns:1fr}
+    .nav-inner{height:58px}
+    .brand{font-size:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#"><span class="dot"></span>Gather</a>
+    <button class="btn btn-primary" id="openModal">+ Create Event</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>Plan. Host. <span class="grad">Celebrate.</span></h1>
+    <p>A simple space to create events, track guests and keep everything in one tidy place.</p>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><div class="k" id="statTotal">0</div><div class="l">Total events</div></div>
+    <div class="stat"><div class="k" id="statUpcoming">0</div><div class="l">Upcoming</div></div>
+    <div class="stat"><div class="k" id="statGuests">0</div><div class="l">Total guests</div></div>
+  </section>
+
+  <section class="toolbar">
+    <div class="search">
+      <span class="ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+        </svg>
+      </span>
+      <input id="search" type="search" placeholder="Search events, locations…" autocomplete="off" />
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="grid" id="grid"></section>
+
+  <div class="empty" id="empty">
+    <div class="big">🗓️</div>
+    <h3>No events here yet</h3>
+    <p>Create your first event and it will show up right here.</p>
+    <button class="btn btn-primary" onclick="document.getElementById('openModal').click()">+ Create Event</button>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h2 id="modalTitle">Create an event</h2>
+    <p class="sub">Fill in the details — you can always add more later.</p>
+    <form id="eventForm" novalidate>
+      <div class="field">
+        <label for="f-title">Event name</label>
+        <input id="f-title" name="title" type="text" placeholder="e.g. Design Systems Summit" required maxlength="80" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="f-category">Category</label>
+          <select id="f-category" name="category">
+            <option value="conference">Conference</option>
+            <option value="workshop">Workshop</option>
+            <option value="meetup">Meetup</option>
+            <option value="concert">Concert</option>
+            <option value="sports">Sports</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-date">Date</label>
+          <input id="f-date" name="date" type="date" required />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="f-time">Time</label>
+          <input id="f-time" name="time" type="time" />
+        </div>
+        <div class="field">
+          <label for="f-attendees">Guests</label>
+          <input id="f-attendees" name="attendees" type="number" min="0" step="1" placeholder="0" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-location">Location</label>
+        <input id="f-location" name="location" type="text" placeholder="Venue, address or online link" maxlength="90" />
+      </div>
+      <div class="field">
+        <label for="f-desc">Description <span style="text-transform:none;font-weight:500">(optional)</span></label>
+        <textarea id="f-desc" name="description" placeholder="A short note about the event…" maxlength="240"></textarea>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const KEY = 'gather.events.v1';
+
+  const CATS = {
+    conference: { label: 'Conference', color: '#6366f1' },
+    workshop:   { label: 'Workshop',   color: '#0ea5e9' },
+    meetup:     { label: 'Meetup',     color: '#10b981' },
+    concert:    { label: 'Concert',    color: '#f59e0b' },
+    sports:     { label: 'Sports',     color: '#ef4444' },
+    other:      { label: 'Other',      color: '#8b5cf6' }
+  };
+
+  /* ---------- helpers ---------- */
+  const pad = n => String(n).padStart(2, '0');
+  const isoFrom = offset => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  const todayISO = () => isoFrom(0);
+  const num = n => Number(n || 0).toLocaleString('en-US');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function fmtTime(t) {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    return `${(h % 12) || 12}:${pad(m || 0)} ${ap}`;
+  }
+
+  function daysAway(date) {
+    const diff = Math.round(
+      (new Date(date + 'T00:00:00') - new Date(todayISO() + 'T00:00:00')) / 86400000
+    );
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff > 1) return `in ${diff} days`;
+    return '';
+  }
+
+  /* ---------- data ---------- */
+  function seed() {
+    return [
+      { id: 'e1', title: 'Founders & Coffee', category: 'meetup', date: isoFrom(1), time: '08:30',
+        location: 'The Roastery, 4th Street', attendees: 32, description: 'Informal morning chat for founders and makers.' },
+      { id: 'e2', title: 'Design Systems Summit', category: 'conference', date: isoFrom(3), time: '09:30',
+        location: 'Metro Convention Center, Hall B', attendees: 240, description: 'A full day of talks on scalable design systems.' },
+      { id: 'e3', title: 'Intro to TypeScript', category: 'workshop', date: isoFrom(6), time: '18:00',
+        location: 'Online (Zoom)', attendees: 45, description: 'Hands-on workshop, no prior TS experience needed.' },
+      { id: 'e4', title: 'Product Meetup #42', category: 'meetup', date: isoFrom(9), time: '19:00',
+        location: 'Hub Coworking, 2nd Floor', attendees: 60, description: 'Lightning talks + networking.' },
+      { id: 'e5', title: 'Neon Nights Live', category: 'concert', date: isoFrom(12), time: '20:00',
+        location: 'Riverside Amphitheatre', attendees: 1200, description: 'Open-air live music night.' },
+      { id: 'e6', title: 'City Half Marathon', category: 'sports', date: isoFrom(20), time: '06:00',
+        location: 'Lakeside Park', attendees: 800, description: '21 km along the lake. Register early!' }
+    ];
+  }
+
+  let events;
+  try {
+    const raw = localStorage.getItem(KEY);
+    events = raw ? JSON.parse(raw) : seed();
+  } catch (e) {
+    events = seed();
+  }
+  if (!Array.isArray(events)) events = seed();
+
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(events)); } catch (e) { /* memory only */ }
+  };
+
+  const state = { q: '', cat: 'all' };
+
+  /* ---------- DOM ---------- */
+  const grid      = document.getElementById('grid');
+  const emptyEl   = document.getElementById('empty');
+  const chipsEl   = document.getElementById('chips');
+  const searchEl  = document.getElementById('search');
+  const overlay   = document.getElementById('overlay');
+  const form      = document.getElementById('eventForm');
+  const toastEl   = document.getElementById('toast');
+
+  /* ---------- render ---------- */
+  function cardHTML(e) {
+    const d    = new Date(e.date + 'T00:00:00');
+    const cat  = CATS[e.category] || CATS.other;
+    const past = e.date < todayISO();
+
+    return `
+      <article class="card${past ? ' past' : ''}">
+        <div class="card-head">
+          <div class="date-badge">
+            <b>${d.getDate()}</b>
+            <span>${d.toLocaleString('en-US', { month: 'short' })}</span>
+          </div>
+          <button class="icon-btn" data-del="${esc(e.id)}" title="Delete event" aria-label="Delete ${esc(e.title)}">✕</button>
+        </div>
+        <h3>${esc(e.title)}</h3>
+        <span class="tag" style="background:${cat.color}1a;color:${cat.color};border:1px solid ${cat.color}33">${cat.label}</span>
+        <div class="meta">📍<span>${esc(e.location || 'TBA')}</span></div>
+        <div class="meta">🕒<span>${fmtTime(e.time) || 'All day'}</span></div>
+        <div class="card-foot">
+          <span>👥 ${num(e.attendees)} going</span>
+          ${past
+            ? '<span style="font-weight:700;color:#b9bed0">Past</span>'
+            : `<span style="font-weight:700;color:${cat.color}">${daysAway(e.date)}</span>`}
+        </div>
+      </article>`;
+  }
+
+  function render() {
+    const q = state.q.trim().toLowerCase();
+
+    const list = events
+      .filter(e => state.cat === 'all' || e.category === state.cat)
+      .filter(e => !q || `${e.title} ${e.location || ''} ${e.description || ''}`.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const pa = a.date < todayISO();
+        const pb = b.date < todayISO();
+        if (pa !== pb) return pa ? 1 : -1;
+        const ka = `${a.date}T${a.time || '00:00'}`;
+        const kb = `${b.date}T${b.time || '00:00'}`;
+        return pa ? kb.localeCompare(ka) : ka.localeCompare(kb);
+      });
+
+    grid.innerHTML = list.map(cardHTML).join('');
+    emptyEl.classList.toggle('show', list.length === 0);
+    updateStats();
+  }
+
+  function updateStats() {
+    const t = todayISO();
+    document.getElementById('statTotal').textContent = events.length;
+    document.getElementById('statUpcoming').textContent = events.filter(e => e.date >= t).length;
+    document.getElementById('statGuests').textContent =
+      num(events.reduce((sum, e) => sum + (Number(e.attendees) || 0), 0));
+  }
+
+  /* ---------- chips ---------- */
+  function renderChips() {
+    const items = [{ id: 'all', label: 'All' }]
+      .concat(Object.entries(CATS).map(([id, c]) => ({ id, label: c.label })));
+
+    chipsEl.innerHTML = items
+      .map(i => `<button class="chip${state.cat === i.id ? ' active' : ''}" data-cat="${i.id}">${i.label}</button>`)
+      .join('');
+  }
+
+  chipsEl.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-cat]');
+    if (!btn) return;
+    state.cat = btn.dataset.cat;
+    [...chipsEl.children].forEach(c => c.classList.toggle('active', c.dataset.cat === state.cat));
+    render();
+  });
+
+  searchEl.addEventListener('input', ev => {
+    state.q = ev.target.value;
+    render();
+  });
+
+  /* ---------- delete ---------- */
+  grid.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-del]');
+    if (!btn) return;
+    const id = btn.dataset.del;
+    const found = events.find(e => e.id === id);
+    events = events.filter(e => e.id !== id);
+    save();
+    render();
+    toast(found ? `Deleted “${found.title}”` : 'Event deleted');
+  });
+
+  /* ---------- modal ---------- */
+  function openModal() {
+    form.reset();
+    document.getElementById('f-date').value = todayISO();
+    document.getElementById('f-time').value = '18:00';
+    overlay.classList.add('show');
+    setTimeout(() => document.getElementById('f-title').focus(), 60);
+  }
+  function closeModal() {
+    overlay.classList.remove('show');
+  }
+
+  document.getElementById('openModal').addEventListener('click', openModal);
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) closeModal(); });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && overlay.classList.contains('show')) closeModal();
+  });
+
+  /* ---------- create ---------- */
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+
+    const data = Object.fromEntries(new FormData(form));
+    const title = (data.title || '').trim();
+    const date = data.date;
+
+    if (!title) {
+      toast('Please add an event name');
+      document.getElementById('f-title').focus();
+      return;
+    }
+    if (!date) {
+      toast('Please pick a date');
+      document.getElementById('f-date').focus();
+      return;
+    }
+
+    events.push({
+      id: (crypto.randomUUID && crypto.randomUUID()) || `e${Date.now()}`,
+      title,
+      category: data.category || 'other',
+      date,
+      time: data.time || '',
+      location: (data.location || '').trim(),
+      attendees: Math.max(0, Number(data.attendees) || 0),
+      description: (data.description || '').trim()
+    });
+
+    save();
+    closeModal();
+    render();
+    toast('Event created 🎉');
+  });
+
+  /* ---------- toast ---------- */
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+  }
+
+  /* ---------- init ---------- */
+  renderChips();
+  render();
+})();
+</script>
+</body>
+</html>
